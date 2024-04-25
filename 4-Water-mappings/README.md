@@ -4,7 +4,7 @@ Copy the `4_Water.pure` text into your legend text editor to try this example. T
 
 ### Testing
 
-To test your code we will use some pre-defined tests which will take in a given JSON and expect an output JSON. Once the mappings are complete all of the tests should then pass.
+To test your code we will use some predefined tests which will take in a given JSON and expect an output JSON. Once the mappings are complete all of the tests should then pass.
 
 # TODO
 

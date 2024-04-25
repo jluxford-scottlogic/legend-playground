@@ -4,13 +4,13 @@ Copy the `5_SoftDrink.pure` text into your legend text editor to try this exampl
 
 ### Testing
 
-To test your code we will use some pre-defined tests which will take in a given JSON and expect an output JSON. Once the mappings are complete all of the tests should then pass.
+To test your code we will use some predefined tests which will take in a given JSON and expect an output JSON. Once the mappings are complete all of the tests should then pass.
 
 # TODO
 
 ### Basic Mappings
 
-First adjust all of the mapped classes to have their corresponding basic `Id`s. Once this is done the tests should now have all of the `class_id` tests pass and when you go through adjusting the association mappings the tests will then pass. You should notice that the `industrial_drink_id` test is failing despite adding in the `id`, invistigate why this test is failing and adjust the mapping so that this test passes.
+First adjust all of the mapped classes to have their corresponding basic `Id`s. Once this is done the tests should now have all of the `class_id` tests pass and when you go through adjusting the association mappings the tests will then pass. You should notice that the `industrial_drink_id` test is failing despite adding in the `id`, investigate why this test is failing and adjust the mapping so that this test passes.
 
 ### Drink
 
@@ -26,4 +26,4 @@ Adjust the `drink` mapping to convert from the `FactoryLine` to the `FizzyDrink`
 
 ### Company
 
-Adjust the `Company` mapping so that it only puts the `FactorySpecs` into the new class, ideally this mapping should be simple as the previous filters will handle any of the complications for you. You should notice that the `Drink` mapping is being greedier than it should, this is because as legend is behaving functionally (i.e. there is no `else` cases) and so will also need a mapping that excludes the fizzy and industrial cases. Add this in so that the `Company` tests pass.
+Adjust the `Company` mapping so that it only puts the `FactorySpecs` into the new class, ideally this mapping should be simple as the previous filters will handle any of the complications for you. You should notice that the `Drink` mapping is being greedier than it should, this is because as legend is behaving functionally (i.e. there are no `else` cases) and so will also need a mapping that excludes the fizzy and industrial cases. Add this in so that the `Company` tests pass.

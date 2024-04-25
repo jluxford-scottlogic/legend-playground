@@ -1,10 +1,10 @@
 ## Coffee Constraints: Example 2
 
-This will be moving onto contraints and their use within classes, all of these constraints will be added onto the `Company` class although will also make use of the `BeanOwner` association.
+This will be moving onto constraints and their use within classes, all of these constraints will be added onto the `Company` class although will also make use of the `CompanyBeans` association.
 
 ### Testing
 
-To test your code throughout example 2 we will be using a self referential mapping that has pre-built tests. To use this you can add the `2_Coffee.pure` code into the bottom of your text file on your legend studio. Attempt to compile this, in the case that it fails to compile you might need to change some of the class values to match names exactly to what is given in the mapping.
+To test your code throughout example 2 we will be using a self referential mapping that has pre-built tests. To use this you can add the `2_Coffee.pure` code into the bottom of your text file (do not overwrite your code from section 1 simply add it in as an extra) on your legend studio. Attempt to compile this, in the case that it fails to compile you might need to change some of the class values to match names exactly to what is given in the mapping.
 
 ### Constraint 1
 
@@ -18,7 +18,7 @@ you can do:
 
 `argA -> function()`
 
-which follows a more functional style as allows you to chain together functions in a more pleasing way. Take for example:
+which follows a more functional style that allows you to chain together functions in a more pleasing way. Take for example:
 
 `h(f(g(argA), argB), argC)`
 
@@ -26,11 +26,11 @@ this could instead be written as:
 
 `argA -> g() -> f(argB) -> h(argC)`
 
-which can be clearer. Attempt to use this arrow notation for these constraints where you can as good practise. For contraints and derived properties to access the class you are currently working in you will need to use `$this.Property`.
+which can be clearer. Attempt to use this arrow notation for these constraints where you can as good practice. For constraints and derived properties to access the class you are currently working in you will need to use `$this.Property`.
 
-For the tests provided this should then cause one of the tests to fail and in the `Test Result` output it should fail due to a `contraint violation`.
+For the tests provided this should then cause one of the tests to fail and in the `Test Result` output it should fail due to a `constraint violation`.
 
-### Contraint 2
+### Constraint 2
 
 The second constraint is going to be more complicated and will be that any company that handles `Raw` `Bean`s should be a `Roaster`, this might require the [if](https://legend.finos.org/docs/reference/released-functions#if) function to add the constraint easily. Some functions will naturally compile to undo arrow notation, the `if` statement is one such example. This is because the arrow notation is designed for functional styles while an `if` statement being specifically for imperative code means that it will automatically change if typed in arrow notation. Try the following constraint for example and notice that it will automatically remove the arrow notation if you convert between ui and text mode:
 
