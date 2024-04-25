@@ -1,0 +1,431 @@
+Enum softdrinks::model::source::DrinkType
+{
+  Lemonade,
+  Cola,
+  Water,
+  Juice,
+  GingerBeer
+}
+
+Class softdrinks::model::dest::Drink
+{
+  Name: String[1];
+  Volume: Integer[1];
+}
+
+Class softdrinks::model::dest::FizzyDrink extends softdrinks::model::dest::Drink
+{
+  Carbination: Decimal[1];
+}
+
+Class softdrinks::model::dest::IndustrialDrink extends softdrinks::model::dest::Drink
+[
+  IndustrialSizeIsAtLeast1000: $this.Volume >= 1000
+]
+{
+}
+
+Class softdrinks::model::dest::Company
+{
+  Name: String[1];
+}
+
+Class softdrinks::model::source::FactorySpecs
+{
+  FactoryLine: softdrinks::model::source::FactoryLine[1..*];
+  CompanyName: String[1];
+}
+
+Class softdrinks::model::source::FactoryLine
+{
+  DrinkType: softdrinks::model::source::DrinkType[1];
+  CarbinationStandard: Decimal[1];
+  BottleSize: Integer[1];
+}
+
+Association softdrinks::model::dest::DrinkOwnership
+{
+  Company: softdrinks::model::dest::Company[1];
+  Drink: softdrinks::model::dest::Drink[*];
+}
+
+Association softdrinks::model::dest::FizzyDrinkOwnership
+{
+  Company: softdrinks::model::dest::Company[1];
+  FizzyDrink: softdrinks::model::dest::FizzyDrink[*];
+}
+
+Association softdrinks::model::dest::IndustrialDrinkOwnership
+{
+  Company: softdrinks::model::dest::Company[1];
+  IndustrialDrink: softdrinks::model::dest::IndustrialDrink[*];
+}
+
+
+###Mapping
+Mapping softdrinks::mapping::drink
+(
+  *softdrinks::model::dest::FizzyDrink: Pure
+  {
+    ~src softdrinks::model::source::FactoryLine
+  }
+  *softdrinks::model::dest::Drink: Pure
+  {
+    ~src softdrinks::model::source::FactoryLine
+  }
+  *softdrinks::model::dest::Company: Pure
+  {
+    ~src softdrinks::model::source::FactorySpecs
+  }
+  *softdrinks::model::dest::IndustrialDrink: Pure
+  {
+    ~src softdrinks::model::source::FactoryLine
+  }
+
+  MappingTests
+  [
+    drink_id
+    (
+      query: |softdrinks::model::dest::Drink.all()->graphFetch(
+  #{
+    softdrinks::model::dest::Drink{
+      Name
+    }
+  }#
+)->serialize(
+  #{
+    softdrinks::model::dest::Drink{
+      Name
+    }
+  }#
+);
+      data:
+      [
+        <Object, JSON, softdrinks::model::source::FactoryLine, '{"DrinkType":"Juice","CarbinationStandard":0,"BottleSize":72}'>
+      ];
+      assert: '{"Name":"Juice"}';
+    ),
+    fizzy_drink_id
+    (
+      query: |softdrinks::model::dest::FizzyDrink.all()->graphFetch(
+  #{
+    softdrinks::model::dest::FizzyDrink{
+      Name
+    }
+  }#
+)->serialize(
+  #{
+    softdrinks::model::dest::FizzyDrink{
+      Name
+    }
+  }#
+);
+      data:
+      [
+        <Object, JSON, softdrinks::model::source::FactoryLine, '{"DrinkType":"Cola","CarbinationStandard":0.5249863243072543,"BottleSize":61}'>
+      ];
+      assert: '{"Name":"Cola"}';
+    ),
+    industrial_drink_id
+    (
+      query: |softdrinks::model::dest::IndustrialDrink.all()->graphFetch(
+  #{
+    softdrinks::model::dest::IndustrialDrink{
+      Name
+    }
+  }#
+)->serialize(
+  #{
+    softdrinks::model::dest::IndustrialDrink{
+      Name
+    }
+  }#
+);
+      data:
+      [
+        <Object, JSON, softdrinks::model::source::FactoryLine, '{"DrinkType":"Lemonade","CarbinationStandard":0.8629875903074359,"BottleSize":2000}'>
+      ];
+      assert: '{"Name":"Lemonade"}';
+    ),
+    company_id
+    (
+      query: |softdrinks::model::dest::Company.all()->graphFetch(
+  #{
+    softdrinks::model::dest::Company{
+      Name
+    }
+  }#
+)->serialize(
+  #{
+    softdrinks::model::dest::Company{
+      Name
+    }
+  }#
+);
+      data:
+      [
+        <Object, JSON, softdrinks::model::source::FactorySpecs, '{"FactoryLine":[{"DrinkType":"Water","CarbinationStandard":0.24117306907437094,"BottleSize":32}],"CompanyName":"CompanyName 40"}'>
+      ];
+      assert: '{"Name":"CompanyName 40"}';
+    ),
+    drink_juice
+    (
+      query: |softdrinks::model::dest::Drink.all()->graphFetch(
+  #{
+    softdrinks::model::dest::Drink{
+      Name,
+      Volume
+    }
+  }#
+)->serialize(
+  #{
+    softdrinks::model::dest::Drink{
+      Name,
+      Volume
+    }
+  }#
+);
+      data:
+      [
+        <Object, JSON, softdrinks::model::source::FactoryLine, '{"DrinkType":"Juice","CarbinationStandard":0,"BottleSize":17}'>
+      ];
+      assert: '{"Name":"Juice","Volume":17}';
+    ),
+    industrial_drink_1000
+    (
+      query: |softdrinks::model::dest::IndustrialDrink.all()->graphFetch(
+  #{
+    softdrinks::model::dest::IndustrialDrink{
+      Name,
+      Volume
+    }
+  }#
+)->serialize(
+  #{
+    softdrinks::model::dest::IndustrialDrink{
+      Name,
+      Volume
+    }
+  }#
+);
+      data:
+      [
+        <Object, JSON, softdrinks::model::source::FactoryLine, '{"DrinkType":"Cola","CarbinationStandard":0.3213283565879331,"BottleSize":1000}'>
+      ];
+      assert: '{"Name":"Cola","Volume":1000}';
+    ),
+    industrial_drink_too_small
+    (
+      query: |softdrinks::model::dest::IndustrialDrink.all()->graphFetch(
+  #{
+    softdrinks::model::dest::IndustrialDrink{
+      Name,
+      Volume
+    }
+  }#
+)->serialize(
+  #{
+    softdrinks::model::dest::IndustrialDrink{
+      Name,
+      Volume
+    }
+  }#
+);
+      data:
+      [
+        <Object, JSON, softdrinks::model::source::FactoryLine, '{"DrinkType":"Lemonade","CarbinationStandard":0.2936746291466618,"BottleSize":76}'>
+      ];
+      assert: '[]';
+    ),
+    fizzy_drink_lemonade
+    (
+      query: |softdrinks::model::dest::FizzyDrink.all()->graphFetch(
+  #{
+    softdrinks::model::dest::FizzyDrink{
+      Name,
+      Volume,
+      Carbination
+    }
+  }#
+)->serialize(
+  #{
+    softdrinks::model::dest::FizzyDrink{
+      Name,
+      Volume,
+      Carbination
+    }
+  }#
+);
+      data:
+      [
+        <Object, JSON, softdrinks::model::source::FactoryLine, '{"DrinkType":"Lemonade","CarbinationStandard":0.487342810813607,"BottleSize":14}'>
+      ];
+      assert: '{"Name":"Lemonade","Volume":14,"Carbination":0.487342810813607}';
+    ),
+    fizzy_drink_water_gives_empty
+    (
+      query: |softdrinks::model::dest::FizzyDrink.all()->graphFetch(
+  #{
+    softdrinks::model::dest::FizzyDrink{
+      Name,
+      Volume,
+      Carbination
+    }
+  }#
+)->serialize(
+  #{
+    softdrinks::model::dest::FizzyDrink{
+      Name,
+      Volume,
+      Carbination
+    }
+  }#
+);
+      data:
+      [
+        <Object, JSON, softdrinks::model::source::FactoryLine, '{"DrinkType":"Water","CarbinationStandard":0,"BottleSize":76}'>
+      ];
+      assert: '[]';
+    ),
+    company_base_case
+    (
+      query: |softdrinks::model::dest::Company.all()->graphFetch(
+  #{
+    softdrinks::model::dest::Company{
+      Name,
+      Drink{
+        Name,
+        Volume
+      },
+      FizzyDrink{
+        Name,
+        Volume,
+        Carbination
+      },
+      IndustrialDrink{
+        Name,
+        Volume
+      }
+    }
+  }#
+)->serialize(
+  #{
+    softdrinks::model::dest::Company{
+      Name,
+      Drink{
+        Name,
+        Volume
+      },
+      FizzyDrink{
+        Name,
+        Volume,
+        Carbination
+      },
+      IndustrialDrink{
+        Name,
+        Volume
+      }
+    }
+  }#
+);
+      data:
+      [
+        <Object, JSON, softdrinks::model::source::FactorySpecs, '{"FactoryLine":[{"DrinkType":"Water","CarbinationStandard":0,"BottleSize":58}],"CompanyName":"CompanyName 51"}'>
+      ];
+      assert: '{"Name":"CompanyName 51","Drink":[{"Name":"Water","Volume":58}],"FizzyDrink":[],"IndustrialDrink":[]}';
+    ),
+    drink_lemonade_gives_empty
+    (
+      query: |softdrinks::model::dest::Drink.all()->graphFetch(
+  #{
+    softdrinks::model::dest::Drink{
+      Name,
+      Volume
+    }
+  }#
+)->serialize(
+  #{
+    softdrinks::model::dest::Drink{
+      Name,
+      Volume
+    }
+  }#
+);
+      data:
+      [
+        <Object, JSON, softdrinks::model::source::FactoryLine, '{"DrinkType":"Lemonade","CarbinationStandard":0.06487553386051086,"BottleSize":52}'>
+      ];
+      assert: '[]';
+    ),
+    drink_industrial_gives_empty
+    (
+      query: |softdrinks::model::dest::Drink.all()->graphFetch(
+  #{
+    softdrinks::model::dest::Drink{
+      Name,
+      Volume
+    }
+  }#
+)->serialize(
+  #{
+    softdrinks::model::dest::Drink{
+      Name,
+      Volume
+    }
+  }#
+);
+      data:
+      [
+        <Object, JSON, softdrinks::model::source::FactoryLine, '{"DrinkType":"Water","CarbinationStandard":0,"BottleSize":1000}'>
+      ];
+      assert: '[]';
+    ),
+    company_adv_case
+    (
+      query: |softdrinks::model::dest::Company.all()->graphFetch(
+  #{
+    softdrinks::model::dest::Company{
+      Name,
+      Drink{
+        Name,
+        Volume
+      },
+      FizzyDrink{
+        Name,
+        Volume,
+        Carbination
+      },
+      IndustrialDrink{
+        Name,
+        Volume
+      }
+    }
+  }#
+)->serialize(
+  #{
+    softdrinks::model::dest::Company{
+      Name,
+      Drink{
+        Name,
+        Volume
+      },
+      FizzyDrink{
+        Name,
+        Volume,
+        Carbination
+      },
+      IndustrialDrink{
+        Name,
+        Volume
+      }
+    }
+  }#
+);
+      data:
+      [
+        <Object, JSON, softdrinks::model::source::FactorySpecs, '{"FactoryLine":[{"DrinkType":"Juice","CarbinationStandard":0,"BottleSize":250},{"DrinkType":"Cola","CarbinationStandard":0.23275624578892282,"BottleSize":330},{"DrinkType":"Water","CarbinationStandard":0,"BottleSize":500},{"DrinkType":"Water","CarbinationStandard":0,"BottleSize":5000}],"CompanyName":"CompanyName 62"}'>
+      ];
+      assert: '{"Name":"CompanyName 62","Drink":[{"Name":"Juice","Volume":250},{"Name":"Water","Volume":500}],"FizzyDrink":[{"Name":"Cola","Volume":330,"Carbination":0.23275624578892282}],"IndustrialDrink":[{"Name":"Water","Volume":5000}]}';
+    )
+  ]
+)

@@ -1,0 +1,6 @@
+Class coffee::model::Bean
+{
+  BagId: String[1];
+  Roast: String[1];
+  OriginLocation: String[1];
+}

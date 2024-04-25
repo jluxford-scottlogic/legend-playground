@@ -1,0 +1,268 @@
+###Mapping
+Mapping coffee::mapping::self
+(
+  *coffee::model::Company: Pure
+  {
+    ~src coffee::model::Company
+    CompanyId: $src.CompanyId,
+    Roaster: $src.Roaster,
+    Bean[coffee_model_Bean]: $src.Bean
+  }
+  *coffee::model::Bean: Pure
+  {
+    ~src coffee::model::Bean
+    Company[coffee_model_Company]: $src.Company,
+    BagId: $src.BagId,
+    RoastStrength: EnumerationMapping coffee_model_RoastStrength: $src.RoastStrength,
+    OriginLocation[coffee_model_Location]: $src.OriginLocation
+  }
+  *coffee::model::Location: Pure
+  {
+    ~src coffee::model::Location
+    Bean[coffee_model_Bean]: $src.Bean,
+    Country: $src.Country
+  }
+
+  coffee::model::RoastStrength: EnumerationMapping
+  {
+    Light: [coffee::model::RoastStrength.Light],
+    Dark: [coffee::model::RoastStrength.Dark],
+    Raw: [coffee::model::RoastStrength.Raw]
+  }
+
+  MappingTests
+  [
+    not_roaster_with_light_roast
+    (
+      query: |coffee::model::Company.all()->graphFetch(
+  #{
+    coffee::model::Company{
+      CompanyId,
+      Roaster,
+      Bean{
+        BagId,
+        RoastStrength,
+        OriginLocation{
+          Country,
+          Name
+        }
+      }
+    }
+  }#
+)->serialize(
+  #{
+    coffee::model::Company{
+      CompanyId,
+      Roaster,
+      Bean{
+        BagId,
+        RoastStrength,
+        OriginLocation{
+          Country,
+          Name
+        }
+      }
+    }
+  }#
+);
+      data:
+      [
+        <Object, JSON, coffee::model::Company, '{"Bean":[{"OriginLocation":{"Name":"Name 52","Country":"Country 25"},"Company":{"CompanyId":5,"Roaster":false},"BagId":"BagId 53","RoastStrength":"Light"}],"CompanyId":5,"Roaster":false}'>
+      ];
+      assert: '{"CompanyId":5,"Roaster":false,"Bean":[{"BagId":"BagId 53","RoastStrength":"Light","OriginLocation":{"Country":"Country 25","Name":"Name 52"}}]}';
+    ),
+    roaster_with_raw_bean
+    (
+      query: |coffee::model::Company.all()->graphFetch(
+  #{
+    coffee::model::Company{
+      CompanyId,
+      Roaster,
+      Bean{
+        BagId,
+        RoastStrength,
+        OriginLocation{
+          Country,
+          Name
+        }
+      }
+    }
+  }#
+)->serialize(
+  #{
+    coffee::model::Company{
+      CompanyId,
+      Roaster,
+      Bean{
+        BagId,
+        RoastStrength,
+        OriginLocation{
+          Country,
+          Name
+        }
+      }
+    }
+  }#
+);
+      data:
+      [
+        <Object, JSON, coffee::model::Company, '{"Bean":[{"OriginLocation":{"Name":"Name 52","Country":"Country 25"},"Company":{"CompanyId":5,"Roaster":true},"BagId":"BagId 53","RoastStrength":"Raw"}],"CompanyId":5,"Roaster":true}'>
+      ];
+      assert: '{"CompanyId":5,"Roaster":true,"Bean":[{"BagId":"BagId 53","RoastStrength":"Raw","OriginLocation":{"Country":"Country 25","Name":"Name 52"}}]}';
+    ),
+    roaster_with_light_roast
+    (
+      query: |coffee::model::Company.all()->graphFetch(
+  #{
+    coffee::model::Company{
+      CompanyId,
+      Roaster,
+      Bean{
+        BagId,
+        RoastStrength,
+        OriginLocation{
+          Country,
+          Name
+        }
+      }
+    }
+  }#
+)->serialize(
+  #{
+    coffee::model::Company{
+      CompanyId,
+      Roaster,
+      Bean{
+        BagId,
+        RoastStrength,
+        OriginLocation{
+          Country,
+          Name
+        }
+      }
+    }
+  }#
+);
+      data:
+      [
+        <Object, JSON, coffee::model::Company, '{"Bean":[{"OriginLocation":{"Name":"Name 52","Country":"Country 25"},"Company":{"CompanyId":5,"Roaster":true},"BagId":"BagId 53","RoastStrength":"Light"}],"CompanyId":5,"Roaster":true}'>
+      ];
+      assert: '{"CompanyId":5,"Roaster":true,"Bean":[{"BagId":"BagId 53","RoastStrength":"Light","OriginLocation":{"Country":"Country 25","Name":"Name 52"}}]}';
+    ),
+    CONSTRAINT_VIOLATION_negative_company_id
+    (
+      query: |coffee::model::Company.all()->graphFetch(
+  #{
+    coffee::model::Company{
+      CompanyId,
+      Bean{
+        RoastStrength,
+        BagId,
+        OriginLocation{
+          Country,
+          Name
+        }
+      }
+    }
+  }#
+)->serialize(
+  #{
+    coffee::model::Company{
+      CompanyId,
+      Bean{
+        RoastStrength,
+        BagId,
+        OriginLocation{
+          Country,
+          Name
+        }
+      }
+    }
+  }#
+);
+      data:
+      [
+        <Object, JSON, coffee::model::Company, '{"Bean":[{"OriginLocation":{"Name":"Name 52","Country":"Country 25"},"Company":{"CompanyId":-5,"Roaster":false},"BagId":"BagId -53","RoastStrength":"Light"}],"CompanyId":-5,"Roaster":false}'>
+      ];
+      assert: '{"THIS SHOULD GIVE A CONSTRAINT VIOLATION":true"}';
+    ),
+    CONSTRAINT_VIOLATION_not_roaster_with_raw_beans
+    (
+      query: |coffee::model::Company.all()->graphFetch(
+  #{
+    coffee::model::Company{
+      CompanyId,
+      Roaster,
+      Bean{
+        BagId,
+        RoastStrength,
+        OriginLocation{
+          Country,
+          Name
+        }
+      }
+    }
+  }#
+)->serialize(
+  #{
+    coffee::model::Company{
+      CompanyId,
+      Roaster,
+      Bean{
+        BagId,
+        RoastStrength,
+        OriginLocation{
+          Country,
+          Name
+        }
+      }
+    }
+  }#
+);
+      data:
+      [
+        <Object, JSON, coffee::model::Company, '{"Bean":[{"OriginLocation":{"Name":"Name 52","Country":"Country 25"},"Company":{"CompanyId":5,"Roaster":false},"BagId":"BagId 53","RoastStrength":"Raw"}],"CompanyId":5,"Roaster":false}'>
+      ];
+      assert: '{"THIS SHOULD GIVE A CONSTRAINT VIOLATION":true}';
+    ),
+    CONSTRAINT_VIOLATION_bean_bag_id_does_not_contain_company_id
+    (
+      query: |coffee::model::Company.all()->graphFetch(
+  #{
+    coffee::model::Company{
+      CompanyId,
+      Roaster,
+      Bean{
+        BagId,
+        RoastStrength,
+        OriginLocation{
+          Country,
+          Name
+        }
+      }
+    }
+  }#
+)->serialize(
+  #{
+    coffee::model::Company{
+      CompanyId,
+      Roaster,
+      Bean{
+        BagId,
+        RoastStrength,
+        OriginLocation{
+          Country,
+          Name
+        }
+      }
+    }
+  }#
+);
+      data:
+      [
+        <Object, JSON, coffee::model::Company, '{"Bean":[{"OriginLocation":{"Name":"Name 52","Country":"Country 25"},"Company":{"CompanyId":9,"Roaster":true},"BagId":"BagId 53","RoastStrength":"Light"}],"CompanyId":9,"Roaster":true}'>
+      ];
+      assert: '{"THIS SHOULD GIVE A CONSTRAINT VIOLATION":true}';
+    )
+  ]
+)

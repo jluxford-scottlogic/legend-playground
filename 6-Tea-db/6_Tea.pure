@@ -1,0 +1,669 @@
+###Relational
+Database tea::database::h2
+(
+  Table Tea
+  (
+    id INTEGER PRIMARY KEY,
+    name VARCHAR(200),
+    type VARCHAR(200),
+    location_id INTEGER
+  )
+  Table Location
+  (
+    id INTEGER PRIMARY KEY,
+    name VARCHAR(200),
+    country VARCHAR(200)
+  )
+  Table Drink
+  (
+    name VARCHAR(200) PRIMARY KEY,
+    tea_id INTEGER,
+    milk BINARY(1),
+    ice BINARY(1),
+    boba_id INTEGER
+  )
+  Table Boba
+  (
+    id INTEGER PRIMARY KEY,
+    flavour VARCHAR(200)
+  )
+
+  Join TeaLocation(Tea.location_id = Location.id)
+  Join TeaDrink(Drink.tea_id = Tea.id)
+  Join BobaDrink(Drink.boba_id = Boba.id)
+)
+
+
+###Pure
+Enum tea::model::TeaType
+{
+  Black,
+  White,
+  Green,
+  Oolong
+}
+
+Class tea::model::Tea
+{
+  Name: String[1];
+  Type: tea::model::TeaType[1];
+  TakenWithMilk: Boolean[0..1];
+  CanBeIced: Boolean[0..1];
+}
+
+Class tea::model::Location
+{
+  Name: String[1];
+  Country: String[1];
+}
+
+Class tea::model::Boba
+{
+  Flavour: String[1];
+}
+
+Association tea::model::BobaUsed
+{
+  Tea: tea::model::Tea[1..*];
+  AllBobaUsedInDrinks: tea::model::Boba[1..*];
+}
+
+Association tea::model::TeaLocation
+{
+  Location: tea::model::Location[1];
+  Tea: tea::model::Tea[*];
+}
+
+
+###Mapping
+Mapping tea::mapping::tea
+(
+  *tea::model::Boba: Relational
+  {
+    ~primaryKey
+    (
+      [tea::database::h2]Boba.id
+    )
+    ~mainTable [tea::database::h2]Boba
+  }
+  *tea::model::Location: Relational
+  {
+    ~primaryKey
+    (
+      [tea::database::h2]Location.id
+    )
+    ~mainTable [tea::database::h2]Location
+  }
+  *tea::model::Tea: Relational
+  {
+    ~primaryKey
+    (
+      [tea::database::h2]Tea.id
+    )
+    ~mainTable [tea::database::h2]Tea
+  }
+
+  tea::model::TeaType: EnumerationMapping
+  {
+    Black: ['Black'],
+    White: ['White'],
+    Green: ['Green'],
+    Oolong: ['Oolong']
+  }
+
+  MappingTests
+  [
+    location_id
+    (
+      query: |tea::model::Location.all()->graphFetch(
+  #{
+    tea::model::Location{
+      Name
+    }
+  }#
+)->serialize(
+  #{
+    tea::model::Location{
+      Name
+    }
+  }#
+);
+      data:
+      [
+        <Relational, SQL, tea::database::h2, 
+          'drop table if exists Location;\n'+
+          'create table Location(id INTEGER PRIMARY KEY, name VARCHAR(200), country VARCHAR(200));\n'+
+          'insert into Location(id, name, country) values(1, \'Assam\', \'India\');\n'
+        >
+      ];
+      assert: '{"Name":"Assam"}';
+    ),
+    boba_id
+    (
+      query: |tea::model::Boba.all()->graphFetch(
+  #{
+    tea::model::Boba{
+      Flavour
+    }
+  }#
+)->serialize(
+  #{
+    tea::model::Boba{
+      Flavour
+    }
+  }#
+);
+      data:
+      [
+        <Relational, SQL, tea::database::h2, 
+          'drop table if exists Boba;\n'+
+          'create table Boba(id INTEGER PRIMARY KEY, flavour VARCHAR(200));\n'+
+          'insert into Boba(id, flavour) values(1, \'Classic\');\n'
+        >
+      ];
+      assert: '{"Flavour":"Classic"}';
+    ),
+    tea_id
+    (
+      query: |tea::model::Tea.all()->graphFetch(
+  #{
+    tea::model::Tea{
+      Name
+    }
+  }#
+)->serialize(
+  #{
+    tea::model::Tea{
+      Name
+    }
+  }#
+);
+      data:
+      [
+        <Relational, SQL, tea::database::h2, 
+          'drop table if exists Tea;\n'+
+          'create table Tea(id INTEGER PRIMARY KEY, name VARCHAR(200), type VARCHAR(200), location_id INTEGER);\n'+
+          'insert into Tea(id, name, type, location_id) values(1, \'Assam\', \'Black\', 1);\n'
+        >
+      ];
+      assert: '{"Name":"Assam"}';
+    ),
+    location_basic
+    (
+      query: |tea::model::Location.all()->graphFetch(
+  #{
+    tea::model::Location{
+      Name,
+      Country,
+      Tea{
+        Name
+      }
+    }
+  }#
+)->serialize(
+  #{
+    tea::model::Location{
+      Name,
+      Country,
+      Tea{
+        Name
+      }
+    }
+  }#
+);
+      data:
+      [
+        <Relational, SQL, tea::database::h2, 
+          'drop table if exists Location;\n'+
+          'create table Location(id INTEGER PRIMARY KEY, name VARCHAR(200), country VARCHAR(200));\n'+
+          'insert into Location(id, name, country) values(1, \'Assam\', \'India\');\n'+
+          'insert into Location(id, name, country) values(2, \'Anhui\', \'China\');\n'+
+          'drop table if exists Tea;\n'+
+          'create table Tea(id INTEGER PRIMARY KEY, name VARCHAR(200), type VARCHAR(200), location_id INTEGER);\n'+
+          'insert into Tea(id, name, type, location_id) values(1, \'Assam\', \'Black\', 1);\n'+
+          'insert into Tea(id, name, type, location_id) values(2, \'Earl Grey\', \'Black\', 2);\n'+
+          'insert into Tea(id, name, type, location_id) values(3, \'Tea\', \'Green\', 2);\n'
+        >
+      ];
+      assert: '[{"Name":"Assam","Country":"India","Tea":[{"Name":"Assam"}]},{"Name":"Anhui","Country":"China","Tea":[{"Name":"Earl Grey"},{"Name":"Tea"}]}]';
+    ),
+    boba_basic
+    (
+      query: |tea::model::Boba.all()->graphFetch(
+  #{
+    tea::model::Boba{
+      Flavour,
+      Tea{
+        Name
+      }
+    }
+  }#
+)->serialize(
+  #{
+    tea::model::Boba{
+      Flavour,
+      Tea{
+        Name
+      }
+    }
+  }#
+);
+      data:
+      [
+        <Relational, SQL, tea::database::h2, 
+          'drop table if exists Tea;\n'+
+          'create table Tea(id INTEGER PRIMARY KEY, name VARCHAR(200), type VARCHAR(200), location_id INTEGER);\n'+
+          'insert into Tea(id, name, type, location_id) values(1, \'Assam\', \'Black\', 1);\n'+
+          'insert into Tea(id, name, type, location_id) values(2, \'Earl Grey\', \'Black\', 2);\n'+
+          'insert into Tea(id, name, type, location_id) values(3, \'Tea\', \'Green\', 2);\n'+
+          'insert into Tea(id, name, type, location_id) values(4, \'Tea\', \'White\', 3);\n'+
+          'insert into Tea(id, name, type, location_id) values(5, \'Tea\', \'Oolong\', 3);\n'+
+          'drop table if exists Boba;\n'+
+          'create table Boba(id INTEGER PRIMARY KEY, flavour VARCHAR(200));\n'+
+          'insert into Boba(id, flavour) values(1, \'Classic\');\n'+
+          'insert into Boba(id, flavour) values(2, \'Fruit\');\n'+
+          'drop table if exists Drink;\n'+
+          'create table Drink(name VARCHAR(200) PRIMARY KEY, tea_id INTEGER, milk BINARY(1), ice BINARY(1), boba_id INTEGER);\n'+
+          'insert into Drink(name, tea_id, milk, ice, boba_id) values(\'Boba Breakfast\', 1, \'1\', \'0\', 1);\n'+
+          'insert into Drink(name, tea_id, milk, ice, boba_id) values(\'Earl Fruity\', 2, \'1\', \'0\', 2);\n'+
+          'insert into Drink(name, tea_id, milk, ice, boba_id) values(\'Iced Green\', 3, \'0\', \'1\', 1);\n'+
+          'insert into Drink(name, tea_id, milk, ice, boba_id) values(\'Green Fruits\', 3, \'0\', \'0\', 2);\n'+
+          'insert into Drink(name, tea_id, milk, ice, boba_id) values(\'White Classic\', 4, \'0\', \'0\', 1);\n'+
+          'insert into Drink(name, tea_id, milk, ice, boba_id) values(\'Oo long will I wait?\', 5, \'1\', \'1\', 2);\n'+
+          'insert into Drink(name, tea_id, milk, ice, boba_id) values(\'Oolong standard\', 5, \'0\', \'0\', 1);\n'
+        >
+      ];
+      assert: '[{"Flavour":"Classic","Tea":[{"Name":"Assam"},{"Name":"Tea"},{"Name":"Tea"},{"Name":"Tea"}]},{"Flavour":"Fruit","Tea":[{"Name":"Earl Grey"},{"Name":"Tea"},{"Name":"Tea"}]}]';
+    ),
+    location_full
+    (
+      query: |tea::model::Location.all()->graphFetch(
+  #{
+    tea::model::Location{
+      Name,
+      Country,
+      Tea{
+        Name,
+        Type,
+        AllBobaUsedInDrinks{
+          Flavour
+        }
+      }
+    }
+  }#
+)->serialize(
+  #{
+    tea::model::Location{
+      Name,
+      Country,
+      Tea{
+        Name,
+        Type,
+        AllBobaUsedInDrinks{
+          Flavour
+        }
+      }
+    }
+  }#
+);
+      data:
+      [
+        <Relational, SQL, tea::database::h2, 
+          'drop table if exists Location;\n'+
+          'create table Location(id INTEGER PRIMARY KEY, name VARCHAR(200), country VARCHAR(200));\n'+
+          'insert into Location(id, name, country) values(1, \'Assam\', \'India\');\n'+
+          'insert into Location(id, name, country) values(2, \'Anhui\', \'China\');\n'+
+          'insert into Location(id, name, country) values(3, \'Fujian\', \'China\');\n'+
+          'drop table if exists Tea;\n'+
+          'create table Tea(id INTEGER PRIMARY KEY, name VARCHAR(200), type VARCHAR(200), location_id INTEGER);\n'+
+          'insert into Tea(id, name, type, location_id) values(1, \'Assam\', \'Black\', 1);\n'+
+          'insert into Tea(id, name, type, location_id) values(2, \'Earl Grey\', \'Black\', 2);\n'+
+          'insert into Tea(id, name, type, location_id) values(3, \'Tea\', \'Green\', 2);\n'+
+          'insert into Tea(id, name, type, location_id) values(4, \'Tea\', \'White\', 3);\n'+
+          'insert into Tea(id, name, type, location_id) values(5, \'Tea\', \'Oolong\', 3);\n'+
+          'drop table if exists Boba;\n'+
+          'create table Boba(id INTEGER PRIMARY KEY, flavour VARCHAR(200));\n'+
+          'insert into Boba(id, flavour) values(1, \'Classic\');\n'+
+          'insert into Boba(id, flavour) values(2, \'Fruit\');\n'+
+          'drop table if exists Drink;\n'+
+          'create table Drink(name VARCHAR(200) PRIMARY KEY, tea_id INTEGER, milk BINARY(1), ice BINARY(1), boba_id INTEGER);\n'+
+          'insert into Drink(name, tea_id, milk, ice, boba_id) values(\'Boba Breakfast\', 1, \'1\', \'0\', 1);\n'+
+          'insert into Drink(name, tea_id, milk, ice, boba_id) values(\'Earl Fruity\', 2, \'1\', \'0\', 2);\n'+
+          'insert into Drink(name, tea_id, milk, ice, boba_id) values(\'Iced Green\', 3, \'0\', \'1\', 1);\n'+
+          'insert into Drink(name, tea_id, milk, ice, boba_id) values(\'Green Fruits\', 3, \'0\', \'0\', 2);\n'+
+          'insert into Drink(name, tea_id, milk, ice, boba_id) values(\'White Classic\', 4, \'0\', \'0\', 1);\n'+
+          'insert into Drink(name, tea_id, milk, ice, boba_id) values(\'Oo long will I wait?\', 5, \'1\', \'1\', 2);\n'+
+          'insert into Drink(name, tea_id, milk, ice, boba_id) values(\'Oolong standard\', 5, \'0\', \'0\', 1);\n'
+        >
+      ];
+      assert: '[{"Name":"Assam","Country":"India","Tea":[{"Name":"Assam","Type":"Black","AllBobaUsedInDrinks":[{"Flavour":"Classic"}]}]},{"Name":"Anhui","Country":"China","Tea":[{"Name":"Earl Grey","Type":"Black","AllBobaUsedInDrinks":[{"Flavour":"Fruit"}]},{"Name":"Tea","Type":"Green","AllBobaUsedInDrinks":[{"Flavour":"Classic"},{"Flavour":"Fruit"}]}]},{"Name":"Fujian","Country":"China","Tea":[{"Name":"Tea","Type":"White","AllBobaUsedInDrinks":[{"Flavour":"Classic"}]},{"Name":"Tea","Type":"Oolong","AllBobaUsedInDrinks":[{"Flavour":"Classic"},{"Flavour":"Fruit"}]}]}]';
+    ),
+    boba_full
+    (
+      query: |tea::model::Boba.all()->graphFetch(
+  #{
+    tea::model::Boba{
+      Flavour,
+      Tea{
+        Name,
+        Type,
+        Location{
+          Name,
+          Country
+        }
+      }
+    }
+  }#
+)->serialize(
+  #{
+    tea::model::Boba{
+      Flavour,
+      Tea{
+        Name,
+        Type,
+        Location{
+          Name,
+          Country
+        }
+      }
+    }
+  }#
+);
+      data:
+      [
+        <Relational, SQL, tea::database::h2, 
+          'drop table if exists Location;\n'+
+          'create table Location(id INTEGER PRIMARY KEY, name VARCHAR(200), country VARCHAR(200));\n'+
+          'insert into Location(id, name, country) values(1, \'Assam\', \'India\');\n'+
+          'insert into Location(id, name, country) values(2, \'Anhui\', \'China\');\n'+
+          'insert into Location(id, name, country) values(3, \'Fujian\', \'China\');\n'+
+          'drop table if exists Tea;\n'+
+          'create table Tea(id INTEGER PRIMARY KEY, name VARCHAR(200), type VARCHAR(200), location_id INTEGER);\n'+
+          'insert into Tea(id, name, type, location_id) values(1, \'Assam\', \'Black\', 1);\n'+
+          'insert into Tea(id, name, type, location_id) values(2, \'Earl Grey\', \'Black\', 2);\n'+
+          'insert into Tea(id, name, type, location_id) values(3, \'Tea\', \'Green\', 2);\n'+
+          'insert into Tea(id, name, type, location_id) values(4, \'Tea\', \'White\', 3);\n'+
+          'insert into Tea(id, name, type, location_id) values(5, \'Tea\', \'Oolong\', 3);\n'+
+          'drop table if exists Boba;\n'+
+          'create table Boba(id INTEGER PRIMARY KEY, flavour VARCHAR(200));\n'+
+          'insert into Boba(id, flavour) values(1, \'Classic\');\n'+
+          'insert into Boba(id, flavour) values(2, \'Fruit\');\n'+
+          'drop table if exists Drink;\n'+
+          'create table Drink(name VARCHAR(200) PRIMARY KEY, tea_id INTEGER, milk BINARY(1), ice BINARY(1), boba_id INTEGER);\n'+
+          'insert into Drink(name, tea_id, milk, ice, boba_id) values(\'Boba Breakfast\', 1, \'1\', \'0\', 1);\n'+
+          'insert into Drink(name, tea_id, milk, ice, boba_id) values(\'Earl Fruity\', 2, \'1\', \'0\', 2);\n'+
+          'insert into Drink(name, tea_id, milk, ice, boba_id) values(\'Iced Green\', 3, \'0\', \'1\', 1);\n'+
+          'insert into Drink(name, tea_id, milk, ice, boba_id) values(\'Green Fruits\', 3, \'0\', \'0\', 2);\n'+
+          'insert into Drink(name, tea_id, milk, ice, boba_id) values(\'White Classic\', 4, \'0\', \'0\', 1);\n'+
+          'insert into Drink(name, tea_id, milk, ice, boba_id) values(\'Oo long will I wait?\', 5, \'1\', \'1\', 2);\n'+
+          'insert into Drink(name, tea_id, milk, ice, boba_id) values(\'Oolong standard\', 5, \'0\', \'0\', 1);\n'
+        >
+      ];
+      assert: '[{"Flavour":"Classic","Tea":[{"Name":"Assam","Type":"Black","Location":{"Name":"Assam","Country":"India"}},{"Name":"Tea","Type":"Green","Location":{"Name":"Anhui","Country":"China"}},{"Name":"Tea","Type":"White","Location":{"Name":"Fujian","Country":"China"}},{"Name":"Tea","Type":"Oolong","Location":{"Name":"Fujian","Country":"China"}}]},{"Flavour":"Fruit","Tea":[{"Name":"Earl Grey","Type":"Black","Location":{"Name":"Anhui","Country":"China"}},{"Name":"Tea","Type":"Green","Location":{"Name":"Anhui","Country":"China"}},{"Name":"Tea","Type":"Oolong","Location":{"Name":"Fujian","Country":"China"}}]}]';
+    ),
+    tea_full
+    (
+      query: |tea::model::Tea.all()->graphFetch(
+  #{
+    tea::model::Tea{
+      Name,
+      Type,
+      AllBobaUsedInDrinks{
+        Flavour
+      },
+      Location{
+        Name,
+        Country
+      }
+    }
+  }#
+)->serialize(
+  #{
+    tea::model::Tea{
+      Name,
+      Type,
+      AllBobaUsedInDrinks{
+        Flavour
+      },
+      Location{
+        Name,
+        Country
+      }
+    }
+  }#
+);
+      data:
+      [
+        <Relational, SQL, tea::database::h2, 
+          'drop table if exists Location;\n'+
+          'create table Location(id INTEGER PRIMARY KEY, name VARCHAR(200), country VARCHAR(200));\n'+
+          'insert into Location(id, name, country) values(1, \'Assam\', \'India\');\n'+
+          'insert into Location(id, name, country) values(2, \'Anhui\', \'China\');\n'+
+          'insert into Location(id, name, country) values(3, \'Fujian\', \'China\');\n'+
+          'drop table if exists Tea;\n'+
+          'create table Tea(id INTEGER PRIMARY KEY, name VARCHAR(200), type VARCHAR(200), location_id INTEGER);\n'+
+          'insert into Tea(id, name, type, location_id) values(1, \'Assam\', \'Black\', 1);\n'+
+          'insert into Tea(id, name, type, location_id) values(2, \'Earl Grey\', \'Black\', 2);\n'+
+          'insert into Tea(id, name, type, location_id) values(3, \'Tea\', \'Green\', 2);\n'+
+          'insert into Tea(id, name, type, location_id) values(4, \'Tea\', \'White\', 3);\n'+
+          'insert into Tea(id, name, type, location_id) values(5, \'Tea\', \'Oolong\', 3);\n'+
+          'drop table if exists Boba;\n'+
+          'create table Boba(id INTEGER PRIMARY KEY, flavour VARCHAR(200));\n'+
+          'insert into Boba(id, flavour) values(1, \'Classic\');\n'+
+          'insert into Boba(id, flavour) values(2, \'Fruit\');\n'+
+          'drop table if exists Drink;\n'+
+          'create table Drink(name VARCHAR(200) PRIMARY KEY, tea_id INTEGER, milk BINARY(1), ice BINARY(1), boba_id INTEGER);\n'+
+          'insert into Drink(name, tea_id, milk, ice, boba_id) values(\'Boba Breakfast\', 1, \'1\', \'0\', 1);\n'+
+          'insert into Drink(name, tea_id, milk, ice, boba_id) values(\'Earl Fruity\', 2, \'1\', \'0\', 2);\n'+
+          'insert into Drink(name, tea_id, milk, ice, boba_id) values(\'Iced Green\', 3, \'0\', \'1\', 1);\n'+
+          'insert into Drink(name, tea_id, milk, ice, boba_id) values(\'Green Fruits\', 3, \'0\', \'0\', 2);\n'+
+          'insert into Drink(name, tea_id, milk, ice, boba_id) values(\'White Classic\', 4, \'0\', \'0\', 1);\n'+
+          'insert into Drink(name, tea_id, milk, ice, boba_id) values(\'Oo long will I wait?\', 5, \'1\', \'1\', 2);\n'+
+          'insert into Drink(name, tea_id, milk, ice, boba_id) values(\'Oolong standard\', 5, \'0\', \'0\', 1);\n'
+        >
+      ];
+      assert: '[{"Name":"Assam","Type":"Black","AllBobaUsedInDrinks":[{"Flavour":"Classic"}],"Location":{"Name":"Assam","Country":"India"}},{"Name":"Earl Grey","Type":"Black","AllBobaUsedInDrinks":[{"Flavour":"Fruit"}],"Location":{"Name":"Anhui","Country":"China"}},{"Name":"Tea","Type":"Green","AllBobaUsedInDrinks":[{"Flavour":"Classic"},{"Flavour":"Fruit"}],"Location":{"Name":"Anhui","Country":"China"}},{"Name":"Tea","Type":"White","AllBobaUsedInDrinks":[{"Flavour":"Classic"}],"Location":{"Name":"Fujian","Country":"China"}},{"Name":"Tea","Type":"Oolong","AllBobaUsedInDrinks":[{"Flavour":"Classic"},{"Flavour":"Fruit"}],"Location":{"Name":"Fujian","Country":"China"}}]';
+    ),
+    tea_agg
+    (
+      query: |tea::model::Tea.all()->graphFetch(
+  #{
+    tea::model::Tea{
+      Name,
+      Type,
+      TakenWithMilk,
+      CanBeIced,
+      AllBobaUsedInDrinks{
+        Flavour
+      },
+      Location{
+        Name,
+        Country
+      }
+    }
+  }#
+)->serialize(
+  #{
+    tea::model::Tea{
+      Name,
+      Type,
+      TakenWithMilk,
+      CanBeIced,
+      AllBobaUsedInDrinks{
+        Flavour
+      },
+      Location{
+        Name,
+        Country
+      }
+    }
+  }#
+);
+      data:
+      [
+        <Relational, SQL, tea::database::h2, 
+          'drop table if exists Location;\n'+
+          'create table Location(id INTEGER PRIMARY KEY, name VARCHAR(200), country VARCHAR(200));\n'+
+          'insert into Location(id, name, country) values(1, \'Assam\', \'India\');\n'+
+          'insert into Location(id, name, country) values(2, \'Anhui\', \'China\');\n'+
+          'insert into Location(id, name, country) values(3, \'Fujian\', \'China\');\n'+
+          'drop table if exists Tea;\n'+
+          'create table Tea(id INTEGER PRIMARY KEY, name VARCHAR(200), type VARCHAR(200), location_id INTEGER);\n'+
+          'insert into Tea(id, name, type, location_id) values(1, \'Assam\', \'Black\', 1);\n'+
+          'insert into Tea(id, name, type, location_id) values(2, \'Earl Grey\', \'Black\', 2);\n'+
+          'insert into Tea(id, name, type, location_id) values(3, \'Tea\', \'Green\', 2);\n'+
+          'insert into Tea(id, name, type, location_id) values(4, \'Tea\', \'White\', 3);\n'+
+          'insert into Tea(id, name, type, location_id) values(5, \'Tea\', \'Oolong\', 3);\n'+
+          'drop table if exists Boba;\n'+
+          'create table Boba(id INTEGER PRIMARY KEY, flavour VARCHAR(200));\n'+
+          'insert into Boba(id, flavour) values(1, \'Classic\');\n'+
+          'insert into Boba(id, flavour) values(2, \'Fruit\');\n'+
+          'drop table if exists Drink;\n'+
+          'create table Drink(name VARCHAR(200) PRIMARY KEY, tea_id INTEGER, milk BINARY(1), ice BINARY(1), boba_id INTEGER);\n'+
+          'insert into Drink(name, tea_id, milk, ice, boba_id) values(\'Boba Breakfast\', 1, \'1\', \'0\', 1);\n'+
+          'insert into Drink(name, tea_id, milk, ice, boba_id) values(\'Earl Fruity\', 2, \'1\', \'0\', 2);\n'+
+          'insert into Drink(name, tea_id, milk, ice, boba_id) values(\'Iced Green\', 3, \'0\', \'1\', 1);\n'+
+          'insert into Drink(name, tea_id, milk, ice, boba_id) values(\'Green Fruits\', 3, \'0\', \'0\', 2);\n'+
+          'insert into Drink(name, tea_id, milk, ice, boba_id) values(\'White Classic\', 4, \'0\', \'0\', 1);\n'+
+          'insert into Drink(name, tea_id, milk, ice, boba_id) values(\'Oo long will I wait?\', 5, \'1\', \'1\', 2);\n'+
+          'insert into Drink(name, tea_id, milk, ice, boba_id) values(\'Oolong standard\', 5, \'0\', \'0\', 1);\n'
+        >
+      ];
+      assert: '[{"Name":"Assam","Type":"Black","TakenWithMilk()":true,"CanBeIced()":false,"AllBobaUsedInDrinks":[{"Flavour":"Classic"}],"Location":{"Name":"Assam","Country":"India"}},{"Name":"Earl Grey","Type":"Black","TakenWithMilk()":true,"CanBeIced()":false,"AllBobaUsedInDrinks":[{"Flavour":"Fruit"}],"Location":{"Name":"Anhui","Country":"China"}},{"Name":"Tea","Type":"Green","TakenWithMilk()":false,"CanBeIced()":true,"AllBobaUsedInDrinks":[{"Flavour":"Classic"},{"Flavour":"Fruit"}],"Location":{"Name":"Anhui","Country":"China"}},{"Name":"Tea","Type":"White","TakenWithMilk()":false,"CanBeIced()":false,"AllBobaUsedInDrinks":[{"Flavour":"Classic"}],"Location":{"Name":"Fujian","Country":"China"}},{"Name":"Tea","Type":"Oolong","TakenWithMilk()":false,"CanBeIced()":true,"AllBobaUsedInDrinks":[{"Flavour":"Classic"},{"Flavour":"Fruit"}],"Location":{"Name":"Fujian","Country":"China"}}]';
+    ),
+    location_agg
+    (
+      query: |tea::model::Location.all()->graphFetch(
+  #{
+    tea::model::Location{
+      Name,
+      Country,
+      Tea{
+        Name,
+        Type,
+        TakenWithMilk,
+        CanBeIced,
+        AllBobaUsedInDrinks{
+          Flavour
+        }
+      }
+    }
+  }#
+)->serialize(
+  #{
+    tea::model::Location{
+      Name,
+      Country,
+      Tea{
+        Name,
+        Type,
+        TakenWithMilk,
+        CanBeIced,
+        AllBobaUsedInDrinks{
+          Flavour
+        }
+      }
+    }
+  }#
+);
+      data:
+      [
+        <Relational, SQL, tea::database::h2, 
+          'drop table if exists Location;\n'+
+          'create table Location(id INTEGER PRIMARY KEY, name VARCHAR(200), country VARCHAR(200));\n'+
+          'insert into Location(id, name, country) values(1, \'Assam\', \'India\');\n'+
+          'insert into Location(id, name, country) values(2, \'Anhui\', \'China\');\n'+
+          'insert into Location(id, name, country) values(3, \'Fujian\', \'China\');\n'+
+          'drop table if exists Tea;\n'+
+          'create table Tea(id INTEGER PRIMARY KEY, name VARCHAR(200), type VARCHAR(200), location_id INTEGER);\n'+
+          'insert into Tea(id, name, type, location_id) values(1, \'Assam\', \'Black\', 1);\n'+
+          'insert into Tea(id, name, type, location_id) values(2, \'Earl Grey\', \'Black\', 2);\n'+
+          'insert into Tea(id, name, type, location_id) values(3, \'Tea\', \'Green\', 2);\n'+
+          'insert into Tea(id, name, type, location_id) values(4, \'Tea\', \'White\', 3);\n'+
+          'insert into Tea(id, name, type, location_id) values(5, \'Tea\', \'Oolong\', 3);\n'+
+          'drop table if exists Boba;\n'+
+          'create table Boba(id INTEGER PRIMARY KEY, flavour VARCHAR(200));\n'+
+          'insert into Boba(id, flavour) values(1, \'Classic\');\n'+
+          'insert into Boba(id, flavour) values(2, \'Fruit\');\n'+
+          'drop table if exists Drink;\n'+
+          'create table Drink(name VARCHAR(200) PRIMARY KEY, tea_id INTEGER, milk BINARY(1), ice BINARY(1), boba_id INTEGER);\n'+
+          'insert into Drink(name, tea_id, milk, ice, boba_id) values(\'Boba Breakfast\', 1, \'1\', \'0\', 1);\n'+
+          'insert into Drink(name, tea_id, milk, ice, boba_id) values(\'Earl Fruity\', 2, \'1\', \'0\', 2);\n'+
+          'insert into Drink(name, tea_id, milk, ice, boba_id) values(\'Iced Green\', 3, \'0\', \'1\', 1);\n'+
+          'insert into Drink(name, tea_id, milk, ice, boba_id) values(\'Green Fruits\', 3, \'0\', \'0\', 2);\n'+
+          'insert into Drink(name, tea_id, milk, ice, boba_id) values(\'White Classic\', 4, \'0\', \'0\', 1);\n'+
+          'insert into Drink(name, tea_id, milk, ice, boba_id) values(\'Oo long will I wait?\', 5, \'1\', \'1\', 2);\n'+
+          'insert into Drink(name, tea_id, milk, ice, boba_id) values(\'Oolong standard\', 5, \'0\', \'0\', 1);\n'
+        >
+      ];
+      assert: '[{"Name":"Assam","Country":"India","Tea":[{"Name":"Assam","Type":"Black","TakenWithMilk()":true,"CanBeIced()":false,"AllBobaUsedInDrinks":[{"Flavour":"Classic"}]}]},{"Name":"Anhui","Country":"China","Tea":[{"Name":"Earl Grey","Type":"Black","TakenWithMilk()":true,"CanBeIced()":false,"AllBobaUsedInDrinks":[{"Flavour":"Fruit"}]},{"Name":"Tea","Type":"Green","TakenWithMilk()":false,"CanBeIced()":true,"AllBobaUsedInDrinks":[{"Flavour":"Classic"},{"Flavour":"Fruit"}]}]},{"Name":"Fujian","Country":"China","Tea":[{"Name":"Tea","Type":"White","TakenWithMilk()":false,"CanBeIced()":false,"AllBobaUsedInDrinks":[{"Flavour":"Classic"}]},{"Name":"Tea","Type":"Oolong","TakenWithMilk()":false,"CanBeIced()":true,"AllBobaUsedInDrinks":[{"Flavour":"Classic"},{"Flavour":"Fruit"}]}]}]';
+    ),
+    boba_agg
+    (
+      query: |tea::model::Boba.all()->graphFetch(
+  #{
+    tea::model::Boba{
+      Flavour,
+      Tea{
+        Name,
+        Type,
+        TakenWithMilk,
+        CanBeIced,
+        Location{
+          Name,
+          Country
+        }
+      }
+    }
+  }#
+)->serialize(
+  #{
+    tea::model::Boba{
+      Flavour,
+      Tea{
+        Name,
+        Type,
+        TakenWithMilk,
+        CanBeIced,
+        Location{
+          Name,
+          Country
+        }
+      }
+    }
+  }#
+);
+      data:
+      [
+        <Relational, SQL, tea::database::h2, 
+          'drop table if exists Location;\n'+
+          'create table Location(id INTEGER PRIMARY KEY, name VARCHAR(200), country VARCHAR(200));\n'+
+          'insert into Location(id, name, country) values(1, \'Assam\', \'India\');\n'+
+          'insert into Location(id, name, country) values(2, \'Anhui\', \'China\');\n'+
+          'insert into Location(id, name, country) values(3, \'Fujian\', \'China\');\n'+
+          'drop table if exists Tea;\n'+
+          'create table Tea(id INTEGER PRIMARY KEY, name VARCHAR(200), type VARCHAR(200), location_id INTEGER);\n'+
+          'insert into Tea(id, name, type, location_id) values(1, \'Assam\', \'Black\', 1);\n'+
+          'insert into Tea(id, name, type, location_id) values(2, \'Earl Grey\', \'Black\', 2);\n'+
+          'insert into Tea(id, name, type, location_id) values(3, \'Tea\', \'Green\', 2);\n'+
+          'insert into Tea(id, name, type, location_id) values(4, \'Tea\', \'White\', 3);\n'+
+          'insert into Tea(id, name, type, location_id) values(5, \'Tea\', \'Oolong\', 3);\n'+
+          'drop table if exists Boba;\n'+
+          'create table Boba(id INTEGER PRIMARY KEY, flavour VARCHAR(200));\n'+
+          'insert into Boba(id, flavour) values(1, \'Classic\');\n'+
+          'insert into Boba(id, flavour) values(2, \'Fruit\');\n'+
+          'drop table if exists Drink;\n'+
+          'create table Drink(name VARCHAR(200) PRIMARY KEY, tea_id INTEGER, milk BINARY(1), ice BINARY(1), boba_id INTEGER);\n'+
+          'insert into Drink(name, tea_id, milk, ice, boba_id) values(\'Boba Breakfast\', 1, \'1\', \'0\', 1);\n'+
+          'insert into Drink(name, tea_id, milk, ice, boba_id) values(\'Earl Fruity\', 2, \'1\', \'0\', 2);\n'+
+          'insert into Drink(name, tea_id, milk, ice, boba_id) values(\'Iced Green\', 3, \'0\', \'1\', 1);\n'+
+          'insert into Drink(name, tea_id, milk, ice, boba_id) values(\'Green Fruits\', 3, \'0\', \'0\', 2);\n'+
+          'insert into Drink(name, tea_id, milk, ice, boba_id) values(\'White Classic\', 4, \'0\', \'0\', 1);\n'+
+          'insert into Drink(name, tea_id, milk, ice, boba_id) values(\'Oo long will I wait?\', 5, \'1\', \'1\', 2);\n'+
+          'insert into Drink(name, tea_id, milk, ice, boba_id) values(\'Oolong standard\', 5, \'0\', \'0\', 1);\n'
+        >
+      ];
+      assert: '[{"Flavour":"Classic","Tea":[{"Name":"Assam","Type":"Black","TakenWithMilk()":true,"CanBeIced()":false,"Location":{"Name":"Assam","Country":"India"}},{"Name":"Tea","Type":"Green","TakenWithMilk()":false,"CanBeIced()":true,"Location":{"Name":"Anhui","Country":"China"}},{"Name":"Tea","Type":"White","TakenWithMilk()":false,"CanBeIced()":false,"Location":{"Name":"Fujian","Country":"China"}},{"Name":"Tea","Type":"Oolong","TakenWithMilk()":false,"CanBeIced()":true,"Location":{"Name":"Fujian","Country":"China"}}]},{"Flavour":"Fruit","Tea":[{"Name":"Earl Grey","Type":"Black","TakenWithMilk()":true,"CanBeIced()":false,"Location":{"Name":"Anhui","Country":"China"}},{"Name":"Tea","Type":"Green","TakenWithMilk()":false,"CanBeIced()":true,"Location":{"Name":"Anhui","Country":"China"}},{"Name":"Tea","Type":"Oolong","TakenWithMilk()":false,"CanBeIced()":true,"Location":{"Name":"Fujian","Country":"China"}}]}]';
+    )
+  ]
+)

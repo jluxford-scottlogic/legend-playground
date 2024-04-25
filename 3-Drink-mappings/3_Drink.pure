@@ -1,0 +1,212 @@
+Enum drink::model::dest::DrinkState
+{
+  Hot,
+  Cold
+}
+
+Enum drink::model::dest::DrinkType
+{
+  Water,
+  Tea,
+  Coffee,
+  Juice,
+  SoftDrink
+}
+
+Enum drink::model::source::DrinkTypeSource
+{
+  Water,
+  Coffee,
+  Tea,
+  Juice,
+  SoftDrink
+}
+
+Class drink::model::source::DrinkSource
+{
+  DrinkId: Integer[1];
+  PricePounds: Integer[1];
+  PricePence: Integer[1];
+  DrinkType: drink::model::source::DrinkTypeSource[1];
+}
+
+Class drink::model::dest::Drink
+{
+  DrinkId: Integer[1];
+  Price: Float[1];
+  DrinkState: drink::model::dest::DrinkState[1];
+  DrinkType: drink::model::dest::DrinkType[1];
+}
+
+
+###Mapping
+Mapping drink::mapping::drink
+(
+  *drink::model::dest::Drink: Pure
+  {
+    ~src drink::model::source::DrinkSource
+  }
+
+  MappingTests
+  [
+    drink_id
+    (
+      query: |drink::model::dest::Drink.all()->graphFetch(
+  #{
+    drink::model::dest::Drink{
+      DrinkId
+    }
+  }#
+)->serialize(
+  #{
+    drink::model::dest::Drink{
+      DrinkId
+    }
+  }#
+);
+      data:
+      [
+        <Object, JSON, drink::model::source::DrinkSource, '{"DrinkId":50}'>
+      ];
+      assert: '{"DrinkId":50}';
+    ),
+    drink_price
+    (
+      query: |drink::model::dest::Drink.all()->graphFetch(
+  #{
+    drink::model::dest::Drink{
+      Price
+    }
+  }#
+)->serialize(
+  #{
+    drink::model::dest::Drink{
+      Price
+    }
+  }#
+);
+      data:
+      [
+        <Object, JSON, drink::model::source::DrinkSource, '{"PricePounds":32,"PricePence":39}'>
+      ];
+      assert: '{"Price":32.39}';
+    ),
+    drink_state_hot
+    (
+      query: |drink::model::dest::Drink.all()->graphFetch(
+  #{
+    drink::model::dest::Drink{
+      DrinkState
+    }
+  }#
+)->serialize(
+  #{
+    drink::model::dest::Drink{
+      DrinkState
+    }
+  }#
+);
+      data:
+      [
+        <Object, JSON, drink::model::source::DrinkSource, '{"DrinkType":"Tea"}'>
+      ];
+      assert: '{"DrinkState":"Hot"}';
+    ),
+    drink_state_cold
+    (
+      query: |drink::model::dest::Drink.all()->graphFetch(
+  #{
+    drink::model::dest::Drink{
+      DrinkState
+    }
+  }#
+)->serialize(
+  #{
+    drink::model::dest::Drink{
+      DrinkState
+    }
+  }#
+);
+      data:
+      [
+        <Object, JSON, drink::model::source::DrinkSource, '{"DrinkType":"Water"}'>
+      ];
+      assert: '{"DrinkState":"Cold"}';
+    ),
+    drink_type_coffee
+    (
+      query: |drink::model::dest::Drink.all()->graphFetch(
+  #{
+    drink::model::dest::Drink{
+      DrinkType
+    }
+  }#
+)->serialize(
+  #{
+    drink::model::dest::Drink{
+      DrinkType
+    }
+  }#
+);
+      data:
+      [
+        <Object, JSON, drink::model::source::DrinkSource, '{"DrinkType":"Coffee"}'>
+      ];
+      assert: '{"DrinkType":"Coffee"}';
+    ),
+    drink_full_juice
+    (
+      query: |drink::model::dest::Drink.all()->graphFetch(
+  #{
+    drink::model::dest::Drink{
+      DrinkId,
+      Price,
+      DrinkState,
+      DrinkType
+    }
+  }#
+)->serialize(
+  #{
+    drink::model::dest::Drink{
+      DrinkId,
+      Price,
+      DrinkState,
+      DrinkType
+    }
+  }#
+);
+      data:
+      [
+        <Object, JSON, drink::model::source::DrinkSource, '{"DrinkId":95,"PricePounds":66,"PricePence":8,"DrinkType":"Juice"}'>
+      ];
+      assert: '{"DrinkId":95,"Price":66.08,"DrinkState":"Cold","DrinkType":"Juice"}';
+    ),
+    drink_full_coffee
+    (
+      query: |drink::model::dest::Drink.all()->graphFetch(
+  #{
+    drink::model::dest::Drink{
+      DrinkId,
+      Price,
+      DrinkState,
+      DrinkType
+    }
+  }#
+)->serialize(
+  #{
+    drink::model::dest::Drink{
+      DrinkId,
+      Price,
+      DrinkState,
+      DrinkType
+    }
+  }#
+);
+      data:
+      [
+        <Object, JSON, drink::model::source::DrinkSource, '{"DrinkId":25,"PricePounds":96,"PricePence":69,"DrinkType":"Coffee"}'>
+      ];
+      assert: '{"DrinkId":25,"Price":96.69,"DrinkState":"Hot","DrinkType":"Coffee"}';
+    )
+  ]
+)

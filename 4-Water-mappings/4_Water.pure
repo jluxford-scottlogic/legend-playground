@@ -1,0 +1,304 @@
+Class water::model::source::WaterSource
+{
+  WaterSourceId: Integer[1];
+}
+
+Class water::model::dest::WaterBottle
+{
+  BottleId: Integer[1];
+}
+
+Class water::model::source::Location
+{
+  Name: String[1];
+  IsDestination: Boolean[1];
+}
+
+Class water::model::dest::Location
+{
+  LocationId: String[1];
+}
+
+Class water::model::source::MineralSource
+{
+  Mineral: String[1];
+}
+
+Class water::model::dest::Mineral
+{
+  Mineral: String[1];
+}
+
+Association water::model::source::WaterSourceSpring
+{
+  WaterSource: water::model::source::WaterSource[1];
+  Location: water::model::source::Location[1..*];
+}
+
+Association water::model::dest::SourceLocation
+{
+  SentWaterBottles: water::model::dest::WaterBottle[*];
+  SourceLocation: water::model::dest::Location[0..1];
+}
+
+Association water::model::dest::DestLocation
+{
+  RecievedWaterBottles: water::model::dest::WaterBottle[*];
+  DestLocation: water::model::dest::Location[0..1];
+}
+
+Association water::model::source::WaterSourceMinerals
+{
+  Minerals: water::model::source::MineralSource[*];
+  WaterSources: water::model::source::WaterSource[*];
+}
+
+Association water::model::dest::WaterMinerals
+{
+  Minerals: water::model::dest::Mineral[*];
+  WaterBottles: water::model::dest::WaterBottle[*];
+}
+
+
+###Mapping
+Mapping water::mapping::water
+(
+  *water::model::dest::WaterBottle: Pure
+  {
+    ~src water::model::source::WaterSource
+  }
+  *water::model::dest::Location: Pure
+  {
+    ~src water::model::source::Location
+  }
+  *water::model::dest::Mineral: Pure
+  {
+    ~src water::model::source::MineralSource
+  }
+
+  MappingTests
+  [
+    mineral_name
+    (
+      query: |water::model::dest::Mineral.all()->graphFetch(
+  #{
+    water::model::dest::Mineral{
+      Mineral
+    }
+  }#
+)->serialize(
+  #{
+    water::model::dest::Mineral{
+      Mineral
+    }
+  }#
+);
+      data:
+      [
+        <Object, JSON, water::model::source::MineralSource, '{"Mineral":"Calcium"}'>
+      ];
+      assert: '{"Mineral":"Calcium"}';
+    ),
+    mineral_water_association
+    (
+      query: |water::model::dest::Mineral.all()->graphFetch(
+  #{
+    water::model::dest::Mineral{
+      Mineral,
+      WaterBottles{
+        BottleId
+      }
+    }
+  }#
+)->serialize(
+  #{
+    water::model::dest::Mineral{
+      Mineral,
+      WaterBottles{
+        BottleId
+      }
+    }
+  }#
+);
+      data:
+      [
+        <Object, JSON, water::model::source::MineralSource, '{"WaterSources":[{"WaterSourceId":5}],"Mineral":"Magnesium"}'>
+      ];
+      assert: '{"Mineral":"Magnesium","WaterBottles":[{"BottleId":5}]}';
+    ),
+    location_id
+    (
+      query: |water::model::dest::Location.all()->graphFetch(
+  #{
+    water::model::dest::Location{
+      LocationId
+    }
+  }#
+)->serialize(
+  #{
+    water::model::dest::Location{
+      LocationId
+    }
+  }#
+);
+      data:
+      [
+        <Object, JSON, water::model::source::Location, '{"Name":"Name 67","IsDestination":true}'>
+      ];
+      assert: '{"LocationId":"Name 67"}';
+    ),
+    location_destination
+    (
+      query: |water::model::dest::Location.all()->graphFetch(
+  #{
+    water::model::dest::Location{
+      LocationId,
+      RecievedWaterBottles{
+        BottleId
+      },
+      SentWaterBottles{
+        BottleId
+      }
+    }
+  }#
+)->serialize(
+  #{
+    water::model::dest::Location{
+      LocationId,
+      RecievedWaterBottles{
+        BottleId
+      },
+      SentWaterBottles{
+        BottleId
+      }
+    }
+  }#
+);
+      data:
+      [
+        <Object, JSON, water::model::source::Location, '{"WaterSource":{"WaterSourceId":92},"Name":"Name 67","IsDestination":true}'>
+      ];
+      assert: '{"LocationId":"Name 67","RecievedWaterBottles":[{"BottleId":92}],"SentWaterBottles":[]}';
+    ),
+    location_source
+    (
+      query: |water::model::dest::Location.all()->graphFetch(
+  #{
+    water::model::dest::Location{
+      LocationId,
+      SentWaterBottles{
+        BottleId
+      },
+      RecievedWaterBottles{
+        BottleId
+      }
+    }
+  }#
+)->serialize(
+  #{
+    water::model::dest::Location{
+      LocationId,
+      SentWaterBottles{
+        BottleId
+      },
+      RecievedWaterBottles{
+        BottleId
+      }
+    }
+  }#
+);
+      data:
+      [
+        <Object, JSON, water::model::source::Location, '{"WaterSource":{"WaterSourceId":92},"Name":"Name 67","IsDestination":false}'>
+      ];
+      assert: '{"LocationId":"Name 67","SentWaterBottles":[{"BottleId":92}],"RecievedWaterBottles":[]}';
+    ),
+    water_bottle_id
+    (
+      query: |water::model::dest::WaterBottle.all()->graphFetch(
+  #{
+    water::model::dest::WaterBottle{
+      BottleId
+    }
+  }#
+)->serialize(
+  #{
+    water::model::dest::WaterBottle{
+      BottleId
+    }
+  }#
+);
+      data:
+      [
+        <Object, JSON, water::model::source::WaterSource, '{"WaterSourceId":80}'>
+      ];
+      assert: '{"BottleId":80}';
+    ),
+    water_bottle_mineral
+    (
+      query: |water::model::dest::WaterBottle.all()->graphFetch(
+  #{
+    water::model::dest::WaterBottle{
+      BottleId,
+      Minerals{
+        Mineral
+      }
+    }
+  }#
+)->serialize(
+  #{
+    water::model::dest::WaterBottle{
+      BottleId,
+      Minerals{
+        Mineral
+      }
+    }
+  }#
+);
+      data:
+      [
+        <Object, JSON, water::model::source::WaterSource, '{"Minerals":[{"Mineral":"Calcium"},{"Mineral":"Magnesium"}],"WaterSourceId":90}'>
+      ];
+      assert: '{"BottleId":90,"Minerals":[{"Mineral":"Calcium"},{"Mineral":"Magnesium"}]}';
+    ),
+    water_bottle_full
+    (
+      query: |water::model::dest::WaterBottle.all()->graphFetch(
+  #{
+    water::model::dest::WaterBottle{
+      BottleId,
+      DestLocation{
+        LocationId
+      },
+      Minerals{
+        Mineral
+      },
+      SourceLocation{
+        LocationId
+      }
+    }
+  }#
+)->serialize(
+  #{
+    water::model::dest::WaterBottle{
+      BottleId,
+      DestLocation{
+        LocationId
+      },
+      Minerals{
+        Mineral
+      },
+      SourceLocation{
+        LocationId
+      }
+    }
+  }#
+);
+      data:
+      [
+        <Object, JSON, water::model::source::WaterSource, '{"Location":[{"Name":"Location Destination","IsDestination":true},{"Name":"Location Source","IsDestination":false}],"Minerals":[{"Mineral":"Calcium"},{"Mineral":"Magnesium"}],"WaterSourceId":43}'>
+      ];
+      assert: '{"BottleId":43,"DestLocation":{"LocationId":"Location Destination"},"Minerals":[{"Mineral":"Calcium"},{"Mineral":"Magnesium"}],"SourceLocation":{"LocationId":"Location Source"}}';
+    )
+  ]
+)
