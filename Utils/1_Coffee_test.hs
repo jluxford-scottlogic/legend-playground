@@ -24,36 +24,69 @@ stringIgnoreFolder :: String -> String -> Bool
 stringIgnoreFolder a b = last (split ':' a) == last (split ':' b)
 
 importingValue :: [Pure]
-importingValue = [Class "coffee::model::Bean" [("BagId", ("String", [Left 1])), ("Roast", ("String", [Left 1])), ("OriginLocation", ("String", [Left 1]))]]
+importingValue = sort [Class "coffee::model::Bean" [("BagId", ("String", [Left 1])), ("Roast", ("String", [Left 1])), ("OriginLocation", ("String", [Left 1]))]]
 
 classesValue :: [Pure]
-classesValue = [Class "coffee::model::Bean" [("BagId",("String",[Left 1])),("Roast",("String",[Left 1])),("OriginLocation",("String",[Left 1]))],Class "coffee::model::Location" [("Name",("String",[Left 1])),("Country",("String",[Left 1]))]]
+classesValue = sort [Class "coffee::model::Bean" [("BagId",("String",[Left 1])),("Roast",("String",[Left 1])),("OriginLocation",("String",[Left 1]))],Class "coffee::model::Location" [("Name",("String",[Left 1])),("Country",("String",[Left 1]))]]
 
 enumsValue :: [Pure]
-enumsValue = [Enum "coffee::model::RoastStrength" ["Light","Dark","Raw"],Class "coffee::model::Bean" [("BagId",("String",[Left 1])),("Roast",("coffee::model::RoastStrength",[Left 1])),("OriginLocation",("String",[Left 1]))],Class "coffee::model::Location" [("Name",("String",[Left 1])),("Country",("String",[Left 1]))]]
+enumsValue = sort [Enum "coffee::model::RoastStrength" ["Light","Dark","Raw"],Class "coffee::model::Bean" [("BagId",("String",[Left 1])),("Roast",("coffee::model::RoastStrength",[Left 1])),("OriginLocation",("String",[Left 1]))],Class "coffee::model::Location" [("Name",("String",[Left 1])),("Country",("String",[Left 1]))]]
 
 associationValue :: [Pure]
-associationValue = [Enum "coffee::model::RoastStrength" ["Light","Dark","Raw"],Class "coffee::model::Bean" [("BagId",("String",[Left 1])),("Roast",("coffee::model::RoastStrength",[Left 1]))],Class "coffee::model::Location" [("Name",("String",[Left 1])),("Country",("String",[Left 1]))],Association "coffee::model::BeanLocation" [("Bean",("coffee::model::Bean",[Left 1,Right "*"])),("Location",("coffee::model::Location",[Left 1]))]]
+associationValue = sort [Enum "coffee::model::RoastStrength" ["Light","Dark","Raw"],Class "coffee::model::Bean" [("BagId",("String",[Left 1])),("Roast",("coffee::model::RoastStrength",[Left 1]))],Class "coffee::model::Location" [("Name",("String",[Left 1])),("Country",("String",[Left 1]))],Association "coffee::model::BeanLocation" [("Bean",("coffee::model::Bean",[Left 1,Right "*"])),("Location",("coffee::model::Location",[Left 1]))]]
 
 companyValue :: [Pure]
-companyValue = [Enum "coffee::model::RoastStrength" ["Light","Dark","Raw"],Class "coffee::model::Bean" [("BagId",("String",[Left 1])),("Roast",("coffee::model::RoastStrength",[Left 1]))],Class "coffee::model::Location" [("Name",("String",[Left 1])),("Country",("String",[Left 1]))],Class "coffee::model::Company" [("CompanyId",("Integer",[Left 1])),("Roaster",("Boolean",[Left 1]))],Association "coffee::model::BeanLocation" [("Bean",("coffee::model::Bean",[Left 1,Right "*"])),("Location",("coffee::model::Location",[Left 1]))],Association "coffee::model::CompanyBeans" [("Company",("coffee::model::Company",[Left 1])),("Bean",("coffee::model::Bean",[Right "*"]))]]
+companyValue = sort [Enum "coffee::model::RoastStrength" ["Light","Dark","Raw"],Class "coffee::model::Bean" [("BagId",("String",[Left 1])),("Roast",("coffee::model::RoastStrength",[Left 1]))],Class "coffee::model::Location" [("Name",("String",[Left 1])),("Country",("String",[Left 1]))],Class "coffee::model::Company" [("CompanyId",("Integer",[Left 1])),("Roaster",("Boolean",[Left 1]))],Association "coffee::model::BeanLocation" [("Bean",("coffee::model::Bean",[Left 1,Right "*"])),("Location",("coffee::model::Location",[Left 1]))],Association "coffee::model::CompanyBeans" [("Company",("coffee::model::Company",[Left 1])),("Bean",("coffee::model::Bean",[Right "*"]))]]
 
-fullTest :: [(String, [Pure])]
-fullTest = reverse [("test testing", importingValue),("Classes Exercise", classesValue),("Enums Exercise", enumsValue),("Associations Exercise", associationValue),("Company Exercise", companyValue)]
+fullTest :: Int -> (String, [Pure])
+fullTest 1 = ("Test Testing:", importingValue)
+fullTest 2 = ("Classes Exercise:", classesValue)
+fullTest 3 = ("Enums Exercise:", enumsValue)
+fullTest 4 = ("Associations Exercise:", associationValue)
+fullTest 6 = ("Company Exercise:", companyValue)
 
-testValues :: [Pure] -> [(String, [Pure])] -> [String]
-testValues input ((sf,exf):(sp,exp):exs) | compareToTestValue input exp && (not (compareToTestValue input exf)) = ["Looks like you managed to pass the " ++ sp ++ " successfully!", sf ++ " looks like it still needs work"]
-                                         | compareToTestValue input exf = ["WOO well dones looks like the 1-Coffee-classes have all been completed!!!"]
-                                         | otherwise = testValues input ((sp,exp):exs)
-testValues input _ = ["Oh that looks like none of the tests pass, probably due to some model changes"]
+testValues :: [Pure] -> (String, [Pure]) -> [String]
+testValues input (s, testCase) = [s] ++ (onEmptyShowSuccess (concat (compareToTestValue input testCase)))
 
-compareToTestValue :: [Pure] -> [Pure] -> Bool
-compareToTestValue ns ms = (sort ns) == (sort ms)
+onEmptyShowSuccess :: [String] -> [String]
+onEmptyShowSuccess s | concat s == [] = ["Successfully passed well done!!!"]
+                     | otherwise = s
 
+compareToTestValue :: [Pure] -> [Pure] -> [[String]]
+compareToTestValue (i:is) (e:es) = comparePure i e : (compareToTestValue is es)
+compareToTestValue _ _ = []
+
+comparePure :: Pure -> Pure -> [String]
+comparePure (Enum name as) (Enum expectedName bs) = "" : concat (compareNames "enum" name expectedName  : zipWith (compareNames "enum value") as bs)
+comparePure (Class name as) (Class expectedName bs) = "" : concat (compareNames "class" name expectedName : comparePropLength expectedName (length as) (length bs) : zipWith (compareProperty expectedName) (sort as) (sort bs))
+comparePure (Association name as) (Association expectedName bs) = "" : concat (compareNames "association" name expectedName : comparePropLength expectedName (length as) (length bs) : zipWith (compareProperty expectedName) (sort as) (sort bs))
+comparePure _ (Enum name _) = "" : [("Expected an enum with name: " ++ name)]
+comparePure _ (Class name _) = "" : [("Expected a class with name: " ++ name)]
+comparePure _ (Association name _) = "" : [("Expected an association with name: " ++ name)]
+
+comparePropLength :: String -> Int -> Int -> [String]
+comparePropLength s n m | n == m = []
+                        | otherwise = ["Class " ++ s ++ " has incorrect number of properties"]
+
+compareNames :: String -> String -> String -> [String]
+compareNames t s1 s2 | s1 == s2 = []
+                     | otherwise = ["Was expecting " ++ t ++ " to be " ++ s2 ++ " instead found " ++ s1]
+
+compareProperty :: String -> (String, MetaType) -> (String, MetaType) -> [String]
+compareProperty tName (name, meta) (expectedName, expectedMeta) | name == expectedName = (compareMeta (expectedName ++ " property on " ++ tName) meta expectedMeta)
+                                                                | otherwise = compareNames ("property on " ++ tName) name expectedName
+
+compareMeta :: String -> MetaType -> MetaType -> [String]
+compareMeta info (t, multiplicty) (et, expectedMultiplicity) | t == et = compareMultiplicty info multiplicty expectedMultiplicity
+                                                             | otherwise = compareNames ("type of " ++ info) t et
+
+compareMultiplicty :: String -> [Either Integer String] -> [Either Integer String] -> [String]
+compareMultiplicty info as bs | as /= bs = ["Multiplicity of " ++ info ++ " was incorrect"]
+                              | otherwise = []
 
 testParse :: (Either ParseError [Pure]) -> [String]
 testParse (Left p) = ["Sorry looks like there is a parse error:", show p]
-testParse (Right ps) = testValues ps fullTest
+testParse (Right ps) = testValues (sort ps) (fullTest (length ps))
 
 writeTestResultsToFile :: [String] -> IO ()
 writeTestResultsToFile s = writeFile "1_Coffee_test_result.txt" (unlines s)
